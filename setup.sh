@@ -7,11 +7,43 @@ echo "============================================="
 # Crear carpetas necesarias
 mkdir -p src/components
 
+# Crear index.html con favicon AWS
+cat <<EOF > index.html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="https://a0.awsstatic.com/libra-css/images/site/fav/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AWS Contract Analyzer</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+EOF
+
 # Crear index.css
 cat <<EOF > src/index.css
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+EOF
+
+# Crear vite.config.js con proxy
+cat <<EOF > vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    proxy: {
+      '/analyze': 'http://localhost:5000'
+    }
+  }
+});
 EOF
 
 # Crear tailwind.config.js
@@ -39,22 +71,7 @@ export default {
 };
 EOF
 
-# Crear vite.config.js
-cat <<EOF > vite.config.js
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    proxy: {
-      '/analyze': 'http://localhost:5000'
-    }
-  }
-});
-EOF
-
-# Agregar homepage y scripts a package.json
+# Agregar homepage y scripts de despliegue
 npx json -I -f package.json -e "this.homepage='https://tuusuario.github.io/aws-contract-analyzer'"
 npx json -I -f package.json -e "this.scripts['predeploy']='npm run build'"
 npx json -I -f package.json -e "this.scripts['deploy']='gh-pages -d dist'"
@@ -75,7 +92,7 @@ export const analyzeContract = async (file) => {
 };
 EOF
 
-# Crear App.jsx
+# Crear App.jsx con manejo de error
 cat <<EOF > src/App.jsx
 import React, { useState } from 'react';
 import AwsFlow from './components/AwsFlow';
@@ -91,8 +108,14 @@ function App() {
       const data = await analyzeContract(file);
       setResult(data);
     } catch (err) {
-      alert('Error al analizar el contrato.');
-      console.error(err);
+      setResult({
+        filename: file.name,
+        summary: "No se pudo analizar el contrato. Verifica si el servidor Flask está corriendo.",
+        keywords: [],
+        confidence: "N/A",
+        error: true
+      });
+      console.error("Error al conectarse con el backend:", err);
     }
   };
 
@@ -151,7 +174,7 @@ const UploadForm = ({ onAnalyze }) => {
 export default UploadForm;
 EOF
 
-# Crear ResultsDashboard.jsx
+# Crear ResultsDashboard.jsx con manejo de error
 cat <<EOF > src/components/ResultsDashboard.jsx
 import React from 'react';
 
@@ -161,10 +184,18 @@ const ResultsDashboard = ({ result }) => {
   return (
     <div className="bg-green-100 p-4 rounded shadow w-full max-w-lg">
       <h2 className="text-xl font-bold text-green-700 mb-2">Resultado del Análisis 📊</h2>
-      <p><strong>Archivo:</strong> {result.filename}</p>
-      <p><strong>Resumen:</strong> {result.summary}</p>
-      <p><strong>Palabras clave:</strong> {result.keywords.join(', ')}</p>
-      <p><strong>Confianza:</strong> {result.confidence}</p>
+      {result.error ? (
+        <p className="text-red-600 font-semibold">
+          ⚠️ Error al conectar con el backend. Asegúrate de que Flask esté activo en <code>localhost:5000</code>.
+        </p>
+      ) : (
+        <>
+          <p><strong>Archivo:</strong> {result.filename}</p>
+          <p><strong>Resumen:</strong> {result.summary}</p>
+          <p><strong>Palabras clave:</strong> {result.keywords.join(', ')}</p>
+          <p><strong>Confianza:</strong> {result.confidence}</p>
+        </>
+      )}
       <p className="text-xs text-gray-500 mt-2">📁 Esto simula DynamoDB</p>
     </div>
   );
@@ -256,4 +287,3 @@ echo "---------------------------------------------"
 echo "Si aún no tienes Vite, puedes crear un proyecto con:"
 echo "  npm create vite@latest"
 echo "---------------------------------------------"
-

@@ -12,8 +12,14 @@ function App() {
       const data = await analyzeContract(file);
       setResult(data);
     } catch (err) {
-      alert('Error al analizar el contrato.');
-      console.error(err);
+      setResult({
+        filename: file.name,
+        summary: "No se pudo analizar el contrato. Verifica si el servidor Flask está corriendo.",
+        keywords: [],
+        confidence: "N/A",
+        error: true
+      });
+      console.error("Error al conectarse con el backend:", err);
     }
   };
 

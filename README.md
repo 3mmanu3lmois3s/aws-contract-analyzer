@@ -48,7 +48,7 @@ El frontend también muestra este flujo mediante un diagrama interactivo con `Re
 ## 📦 Instalación rápida
 
 ```bash
-git clone https://github.com/tuusuario/aws-contract-analyzer.git
+git clone https://github.com/3mmanu3lmois3s/aws-contract-analyzer.git
 cd aws-contract-analyzer
 chmod +x setup.sh
 ./setup.sh
