@@ -3,14 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
-  },
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -34,5 +26,11 @@
     "tailwindcss": "^4.1.2",
     "vite": "^6.2.0"
   },
-  "homepage": "https://3mmanu3lmois3s.github.io/aws-contract-analyzer"
+  "homepage": "https://3mmanu3lmois3s.github.io/aws-contract-analyzer",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
+  }
 }
