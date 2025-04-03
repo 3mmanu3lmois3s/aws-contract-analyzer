@@ -19,7 +19,7 @@ cat <<EOF > index.html
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="src/main.jsx"></script>
   </body>
 </html>
 EOF
