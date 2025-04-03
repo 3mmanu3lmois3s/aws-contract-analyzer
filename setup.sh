@@ -7,6 +7,23 @@ echo "============================================="
 # Crear carpetas necesarias
 mkdir -p src/components
 
+# Crear index.html compatible con Vite
+cat <<EOF > index.html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AWS Contract Analyzer</title>
+    <link rel="icon" href="https://a0.awsstatic.com/libra-css/images/site/fav/favicon.ico" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+EOF
+
 # Crear vite.config.js con base para producción (GitHub Pages)
 cat <<EOF > vite.config.js
 import { defineConfig } from 'vite';
@@ -49,7 +66,7 @@ export default {
 EOF
 
 # Agregar homepage y scripts de despliegue
-npx json -I -f package.json -e "this.homepage='https://tuusuario.github.io/aws-contract-analyzer'"
+npx json -I -f package.json -e "this.homepage='https://3mmanu3lmois3s.github.io/aws-contract-analyzer'"
 npx json -I -f package.json -e "this.scripts['predeploy']='npm run build'"
 npx json -I -f package.json -e "this.scripts['deploy']='gh-pages -d dist'"
 
