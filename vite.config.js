@@ -7,5 +7,6 @@ export default defineConfig({
     proxy: {
       '/analyze': 'http://localhost:5000'
     }
-  }
+  },
+  base: '/aws-contract-analyzer/'
 });

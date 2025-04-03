@@ -7,7 +7,7 @@ echo "============================================="
 # Crear carpetas necesarias
 mkdir -p src/components
 
-# Crear index.html con favicon AWS
+# Crear index.html con favicon AWS y ruta relativa a main.jsx
 cat <<EOF > index.html
 <!DOCTYPE html>
 <html lang="en">
@@ -19,7 +19,7 @@ cat <<EOF > index.html
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="src/main.jsx"></script>
   </body>
 </html>
 EOF
@@ -42,7 +42,8 @@ export default defineConfig({
     proxy: {
       '/analyze': 'http://localhost:5000'
     }
-  }
+  },
+  base: '/aws-contract-analyzer/'
 });
 EOF
 
@@ -75,6 +76,20 @@ EOF
 npx json -I -f package.json -e "this.homepage='https://tuusuario.github.io/aws-contract-analyzer'"
 npx json -I -f package.json -e "this.scripts['predeploy']='npm run build'"
 npx json -I -f package.json -e "this.scripts['deploy']='gh-pages -d dist'"
+
+# Crear src/main.jsx
+cat <<EOF > src/main.jsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css';
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+EOF
 
 # Crear api.js
 cat <<EOF > src/api.js
