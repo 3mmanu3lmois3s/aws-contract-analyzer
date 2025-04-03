@@ -61,10 +61,25 @@ npm run dev  # o npm run deploy para publicar
 
 ## 🌐 Despliegue en GitHub Pages
 
-El `setup.sh` incluye:
-- Configuración `vite.config.js` con proxy
-- Scripts de `predeploy` y `deploy` en `package.json`
-- Instalación de `gh-pages`
+Para publicar correctamente en GitHub Pages:
+
+Asegúrate de tener estas líneas en tu package.json:
+
+"homepage": "https://3mmanu3lmois3s.github.io/aws-contract-analyzer",
+"scripts": {
+  "dev": "vite",
+  "build": "vite build",
+  "predeploy": "npm run build",
+  "deploy": "gh-pages -d dist"
+}
+
+En GitHub:
+
+Ve a Settings > Pages
+
+Selecciona la rama gh-pages y carpeta raíz /
+
+Guarda los cambios
 
 Despliegue:
 ```bash

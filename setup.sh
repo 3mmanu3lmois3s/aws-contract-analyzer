@@ -74,15 +74,51 @@ cat <<EOF > src/index.css
 @tailwind utilities;
 EOF
 
+# Crear AwsFlow.jsx con tooltips y diseño responsivo
+cat <<EOF > src/components/AwsFlow.jsx
+import React from 'react';
+import ReactFlow, { Background, Controls } from 'reactflow';
+import 'reactflow/dist/style.css';
+
+const nodes = [
+  { id: '1', data: { label: <div title="Esto simula una subida de archivo a S3">📁 S3 (Upload)</div> }, position: { x: 100, y: 0 }, style: { background: '#ebf8ff', padding: 10, border: '1px solid #90cdf4' } },
+  { id: '2', data: { label: <div title="Simula el paso por API Gateway">⚡ API Gateway</div> }, position: { x: 100, y: 100 }, style: { background: '#ffffcc', padding: 10, border: '1px solid #f6e05e' } },
+  { id: '3', data: { label: <div title="Simula una función Lambda que analiza el contrato">⚙️ Lambda (Análisis)</div> }, position: { x: 100, y: 200 }, style: { background: '#fee2e2', padding: 10, border: '1px solid #f56565' } },
+  { id: '4', data: { label: <div title="Simula guardar el resultado en DynamoDB">🗃️ DynamoDB (Resultados)</div> }, position: { x: 100, y: 300 }, style: { background: '#ccfbf1', padding: 10, border: '1px solid #38b2ac' } },
+];
+
+const edges = [
+  { id: 'e1-2', source: '1', target: '2' },
+  { id: 'e2-3', source: '2', target: '3' },
+  { id: 'e3-4', source: '3', target: '4' },
+];
+
+function AwsFlow() {
+  return (
+    <div className="w-full h-[400px] sm:h-[500px] md:h-[600px] rounded bg-white border shadow mb-6">
+      <ReactFlow nodes={nodes} edges={edges} fitView>
+        <Background />
+        <Controls />
+      </ReactFlow>
+    </div>
+  );
+}
+
+export default AwsFlow;
+EOF
+
 # Instalar dependencias necesarias
-echo "\n📦 Instalando dependencias necesarias..."
+echo "
+📦 Instalando dependencias necesarias..."
 npm install
 npm install -D tailwindcss @tailwindcss/postcss postcss autoprefixer axios reactflow gh-pages json
 
 # Mensaje final
-echo "\n✅ Todo listo. Ejecuta ahora:"
+echo "
+✅ Todo listo. Ejecuta ahora:"
 echo "---------------------------------------------"
 echo "  npm run dev     # para desarrollo local"
 echo "  npm run deploy  # para publicar en GitHub Pages"
 echo "---------------------------------------------"
 echo "¡Recuerda tener Flask corriendo en localhost:5000 para probarlo localmente!"
+
