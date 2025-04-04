@@ -1,27 +1,21 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+const isProduction = window.location.hostname.includes("github.io");
 
-app = Flask(__name__)
-CORS(app, origins=["http://localhost:5000", "https://3mmanu3lmois3s.github.io"], supports_credentials=True)
+const BASE_URL = isProduction
+  ? "http://localhost:5000/analyze"
+  : "/analyze";
 
-@app.route('/analyze', methods=['POST'])
-def analyze_contract():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
+export const analyzeContract = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
 
-    file = request.files['file']
-    filename = file.filename
+  const response = await fetch(BASE_URL, {
+    method: "POST",
+    body: formData,
+  });
 
-    result = {
-        'filename': filename,
-        'type': 'Contrato de Servicios',
-        'duration': '12 meses',
-        'risk': 'Moderado',
-        'compliance': '✔ Cumple con GDPR',
-        'recommendation': '✔ Apto para firma'
-    }
+  if (!response.ok) {
+    throw new Error("Error analyzing contract");
+  }
 
-    return jsonify(result)
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+  return response.json();
+};

@@ -12,7 +12,7 @@ def analyze_contract():
     file = request.files['file']
     filename = file.filename
 
-    # 🧪 Simular análisis (¡esto luego será real!)
+    # 🧪 Simulación de análisis (esto se puede mejorar)
     result = {
         'filename': filename,
         'type': 'Contrato de Servicios',

@@ -1,6 +1,5 @@
-node_modules
-dist
+node_modules/
+dist/
 .env
-__pycache__
+__pycache__/
 *.pyc
-api/__pycache__
