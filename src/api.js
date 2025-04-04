@@ -2,10 +2,12 @@
 
 const isLocal =
   window.location.hostname === 'localhost' ||
-  window.location.hostname.includes('127.0.0.1') ||
-  window.location.hostname.includes('github.io');
+  window.location.hostname.startsWith('127.') ||
+  window.location.hostname.endsWith('.github.io'); // más general por si usas subdominios
 
-const BASE_API_URL = isLocal ? 'http://localhost:5000' : ''; // Esto permite que desde GitHub Pages el navegador use tu localhost
+const BASE_API_URL = isLocal
+  ? 'http://localhost:5000'
+  : 'http://localhost:5000'; // Siempre apuntamos al backend local
 
 /**
  * Envía el contrato al backend Flask para su análisis.
@@ -19,6 +21,7 @@ export async function analyzeContract(file) {
   const response = await fetch(`${BASE_API_URL}/analyze`, {
     method: 'POST',
     body: formData,
+    credentials: 'include', // recomendado si en el futuro agregas auth
   });
 
   if (!response.ok) {
