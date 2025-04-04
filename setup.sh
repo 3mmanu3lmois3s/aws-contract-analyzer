@@ -1,20 +1,20 @@
 #!/bin/bash
 
 echo "============================================="
-echo " AWS Contract Analyzer Setup (Vite + Tailwind + React + Flow + Flask Proxy)"
+echo " AWS Contract Analyzer Setup (Vite + Tailwind + React + Flow + Flask API Support)"
 echo "============================================="
 
-# Crear carpetas necesarias
+# Crear estructura de carpetas necesarias
 mkdir -p src/components
 
-# Crear vite.config.js con base para producción (GitHub Pages)
+# Crear vite.config.js con configuración de base y proxy para GitHub Pages
 cat <<EOF > vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [react()],
   base: '/aws-contract-analyzer/',
+  plugins: [react()],
   server: {
     proxy: {
       '/analyze': 'http://localhost:5000'
@@ -38,9 +38,9 @@ export default {
 };
 EOF
 
-# Crear postcss.config.js compatible con Tailwind v4+
+# Crear postcss.config.js
 cat <<EOF > postcss.config.js
-import tailwind from '@tailwindcss/postcss';
+import tailwind from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
 
 export default {
@@ -48,82 +48,35 @@ export default {
 };
 EOF
 
-# Crear archivo .gitignore
+# Crear .gitignore con buenas prácticas
 cat <<EOF > .gitignore
-node_modules/
-dist/
+node_modules
+dist
 .env
-__pycache__/
-*.pyc
+.DS_Store
+__pycache__
 EOF
 
-# Crear src/api.js con lógica que detecta entorno local o GitHub Pages
-cat <<EOF > src/api.js
-const isProduction = window.location.hostname.includes("github.io");
-
-const BASE_URL = isProduction
-  ? "http://localhost:5000/analyze"
-  : "/analyze";
-
-export const analyzeContract = async (file) => {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch(BASE_URL, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new Error("Error analyzing contract");
-  }
-
-  return response.json();
-};
-EOF
-
-# Crear API Flask en api.py
-cat <<EOF > api.py
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-
-app = Flask(__name__)
-CORS(app)
-
-@app.route('/analyze', methods=['POST'])
-def analyze_contract():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
-
-    file = request.files['file']
-    filename = file.filename
-
-    # 🧪 Simulación de análisis (esto se puede mejorar)
-    result = {
-        'filename': filename,
-        'type': 'Contrato de Servicios',
-        'duration': '12 meses',
-        'risk': 'Moderado',
-        'compliance': '✔ Cumple con GDPR',
-        'recommendation': '✔ Apto para firma'
-    }
-
-    return jsonify(result)
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-EOF
-
-# Agregar homepage y scripts de despliegue
+# Agregar homepage y scripts de despliegue en package.json
 npx json -I -f package.json -e "this.homepage='https://3mmanu3lmois3s.github.io/aws-contract-analyzer'"
 npx json -I -f package.json -e "this.scripts['predeploy']='npm run build'"
 npx json -I -f package.json -e "this.scripts['deploy']='gh-pages -d dist'"
 
-# Crear src/index.css
-cat <<EOF > src/index.css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+# Crear HTML base
+cat <<EOF > index.html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AWS Contract Analyzer</title>
+    <link rel="icon" href="https://a0.awsstatic.com/libra-css/images/site/fav/favicon.ico" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
 EOF
 
 # Crear src/main.jsx
@@ -140,16 +93,59 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 );
 EOF
 
+# Crear archivo de estilos Tailwind
+cat <<EOF > src/index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+EOF
+
+# Crear api.py para backend local con Flask
+cat <<EOF > api.py
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+@app.route('/analyze', methods=['POST'])
+def analyze_contract():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+    filename = file.filename
+
+    # Simulación de análisis
+    result = {
+        'filename': filename,
+        'type': 'Contrato de Servicios',
+        'duration': '12 meses',
+        'risk': 'Moderado',
+        'compliance': '✔ Cumple con GDPR',
+        'recommendation': '✔ Apto para firma'
+    }
+
+    return jsonify(result)
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
+EOF
+
 # Instalar dependencias necesarias
-echo "\n📦 Instalando dependencias necesarias..."
 npm install
-npm install -D tailwindcss @tailwindcss/postcss postcss autoprefixer axios reactflow gh-pages json
+npm install -D tailwindcss postcss autoprefixer gh-pages json
+npm install axios reactflow
 
 # Mensaje final
-echo "\n✅ Todo listo. Ejecuta ahora:"
-echo "---------------------------------------------"
-echo "  npm run dev     # para desarrollo local"
-echo "  npm run deploy  # para publicar en GitHub Pages"
-echo "  python api.py    # para ejecutar el backend Flask"
-echo "---------------------------------------------"
-echo "¡Recuerda tener Flask corriendo en localhost:5000 al usar GitHub Pages!"
+cat <<EOF
+
+✅ Todo listo. Ahora puedes:
+---------------------------------------------
+  npm run dev     # Para desarrollo local
+  npm run build   # Para generar /dist
+  npm run deploy  # Para publicar en GitHub Pages
+---------------------------------------------
+✔ Si tienes Python instalado, ejecuta también:
+  python api.py   # Para iniciar la API en localhost:5000
+EOF
