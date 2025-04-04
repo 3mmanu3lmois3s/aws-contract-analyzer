@@ -1,38 +1,14 @@
 #!/bin/bash
 
 echo "============================================="
-echo " AWS Contract Analyzer Setup (Vite + Tailwind + React + Flow)"
+echo " AWS Contract Analyzer Setup (Frontend + API Python)"
 echo "============================================="
 
 # Crear carpetas necesarias
 mkdir -p src/components
+mkdir -p api
 
-# Crear .gitignore para evitar subir node_modules y otros archivos no deseados
-cat <<EOF > .gitignore
-# Node modules
-node_modules/
-dist/
-.vite/
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# Env files
-.env
-.env.*.local
-
-# Editor folders
-.vscode/
-.idea/
-
-# Mac and system files
-.DS_Store
-Thumbs.db
-EOF
-
-# Crear vite.config.js con base para producción (GitHub Pages)
+# Crear vite.config.js
 cat <<EOF > vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -73,7 +49,18 @@ export default {
 };
 EOF
 
+# Crear .gitignore
+cat <<EOF > .gitignore
+node_modules
+dist
+.env
+__pycache__
+*.pyc
+api/__pycache__
+EOF
+
 # Agregar homepage y scripts de despliegue
+echo "\n🔧 Configurando scripts de despliegue..."
 npx json -I -f package.json -e "this.homepage='https://3mmanu3lmois3s.github.io/aws-contract-analyzer'"
 npx json -I -f package.json -e "this.scripts['predeploy']='npm run build'"
 npx json -I -f package.json -e "this.scripts['deploy']='gh-pages -d dist'"
@@ -92,22 +79,58 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 );
 EOF
 
-# Crear src/index.css
+# Crear index.css
 cat <<EOF > src/index.css
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 EOF
 
+# Crear archivo api.py con lógica CORS integrada
+cat <<EOF > api/api.py
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app, origins=["http://localhost:5000", "https://3mmanu3lmois3s.github.io"], supports_credentials=True)
+
+@app.route('/analyze', methods=['POST'])
+def analyze_contract():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+    filename = file.filename
+
+    result = {
+        'filename': filename,
+        'type': 'Contrato de Servicios',
+        'duration': '12 meses',
+        'risk': 'Moderado',
+        'compliance': '✔ Cumple con GDPR',
+        'recommendation': '✔ Apto para firma'
+    }
+
+    return jsonify(result)
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
+EOF
+
 # Instalar dependencias necesarias
-echo "\n📦 Instalando dependencias necesarias..."
+echo "\n📦 Instalando dependencias..."
 npm install
 npm install -D tailwindcss @tailwindcss/postcss postcss autoprefixer axios reactflow gh-pages json
 
-# Mensaje final
-echo "\n✅ Todo listo. Ejecuta ahora:"
-echo "---------------------------------------------"
-echo "  npm run dev     # para desarrollo local"
-echo "  npm run deploy  # para publicar en GitHub Pages"
-echo "---------------------------------------------"
-echo "¡Recuerda tener Flask corriendo en localhost:5000 para probarlo localmente!"
+# Instrucciones para API Flask
+cat <<EOF
+
+✅ Todo listo.
+---------------------------------------------
+  npm run dev     # para desarrollo local frontend
+  npm run deploy  # para publicar en GitHub Pages
+
+  # Ejecutar API local Flask:
+  cd api && pip install flask flask-cors && python api.py
+---------------------------------------------
+EOF
