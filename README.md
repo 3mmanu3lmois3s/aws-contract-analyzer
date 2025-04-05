@@ -1,6 +1,6 @@
 # AWS Contract Analyzer
 
-Una demo profesional de arquitectura serverless simulada, creada con **Vite + React + TailwindCSS + ReactFlow**, lista para usar como prueba de concepto en presentaciones técnicas y entrevistas.
+Una demo profesional de arquitectura serverless simulada, creada con **Vite + React + TailwindCSS + ReactFlow**.
 
 ---
 
@@ -26,6 +26,7 @@ El frontend también muestra este flujo mediante un diagrama interactivo con `Re
 ## ⚙️ Requisitos previos
 
 - Node.js ≥ 18
+- Python ≥ 3.10
 - Git
 - Acceso a terminal bash compatible (`Git Bash`, `WSL`, `Linux`, etc.)
 
@@ -61,25 +62,10 @@ npm run dev  # o npm run deploy para publicar
 
 ## 🌐 Despliegue en GitHub Pages
 
-Para publicar correctamente en GitHub Pages:
-
-Asegúrate de tener estas líneas en tu package.json:
-
-"homepage": "https://3mmanu3lmois3s.github.io/aws-contract-analyzer",
-"scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "predeploy": "npm run build",
-  "deploy": "gh-pages -d dist"
-}
-
-En GitHub:
-
-Ve a Settings > Pages
-
-Selecciona la rama gh-pages y carpeta raíz /
-
-Guarda los cambios
+El `setup.sh` incluye:
+- Configuración `vite.config.js` con proxy
+- Scripts de `predeploy` y `deploy` en `package.json`
+- Instalación de `gh-pages`
 
 Despliegue:
 ```bash
@@ -95,16 +81,13 @@ https://3mmanu3lmois3s.github.io/aws-contract-analyzer
 
 ## 🔁 Backend Flask local
 
-Asegúrate de tener una API corriendo en `http://localhost:5000`. El frontend hará peticiones automáticamente allí vía proxy Vite:
+La API de análisis corre localmente. Es fundamental ejecutarla en tu máquina:
 
-```js
-// vite.config.js
-server: {
-  proxy: {
-    '/analyze': 'http://localhost:5000'
-  }
-}
+```bash
+python api.py
 ```
+
+Esto simula el comportamiento de un backend AWS Lambda. El frontend usará esta API si detecta que está en localhost.
 
 ---
 
@@ -115,7 +98,7 @@ server: {
 - [x] Tailwind + Axios + Proxy configurado
 - [x] Setup automatizado con `setup.sh`
 - [x] Preparado para GitHub Pages
-- [ ] API Flask con lógica de análisis real (pendiente)
+- [x] API Flask de prueba local funcional
 
 ---
 
@@ -129,4 +112,3 @@ server: {
 ## 📄 Licencia
 
 MIT © 2025 - Emmanuel Moisés Mellado Martínez
-

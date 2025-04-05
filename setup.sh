@@ -1,20 +1,20 @@
 #!/bin/bash
 
 echo "============================================="
-echo " AWS Contract Analyzer Setup (Vite + Tailwind + React + Flow + Flask API Support)"
+echo " AWS Contract Analyzer Setup (Vite + Flask API + Tailwind + ReactFlow)"
 echo "============================================="
 
-# Crear estructura de carpetas necesarias
-mkdir -p src/components
+# Crear carpetas necesarias
+mkdir -p src/components backend
 
-# Crear vite.config.js con configuración de base y proxy para GitHub Pages
+# Crear vite.config.js
 cat <<EOF > vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  base: '/aws-contract-analyzer/',
   plugins: [react()],
+  base: '/aws-contract-analyzer/',
   server: {
     proxy: {
       '/analyze': 'http://localhost:5000'
@@ -38,9 +38,9 @@ export default {
 };
 EOF
 
-# Crear postcss.config.js
+# Crear postcss.config.js (versión funcional)
 cat <<EOF > postcss.config.js
-import tailwind from 'tailwindcss';
+import tailwind from '@tailwindcss/postcss';
 import autoprefixer from 'autoprefixer';
 
 export default {
@@ -48,65 +48,52 @@ export default {
 };
 EOF
 
-# Crear .gitignore con buenas prácticas
-cat <<EOF > .gitignore
-node_modules
-dist
-.env
-.DS_Store
-__pycache__
-EOF
-
-# Agregar homepage y scripts de despliegue en package.json
+# Actualizar package.json para despliegue
 npx json -I -f package.json -e "this.homepage='https://3mmanu3lmois3s.github.io/aws-contract-analyzer'"
 npx json -I -f package.json -e "this.scripts['predeploy']='npm run build'"
 npx json -I -f package.json -e "this.scripts['deploy']='gh-pages -d dist'"
 
-# Crear HTML base
-cat <<EOF > index.html
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AWS Contract Analyzer</title>
-    <link rel="icon" href="https://a0.awsstatic.com/libra-css/images/site/fav/favicon.ico" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
+# Crear archivo src/api.js
+cat <<'EOF' > src/api.js
+const isLocal =
+  window.location.hostname === 'localhost' ||
+  window.location.hostname.startsWith('127.') ||
+  window.location.hostname.endsWith('.github.io');
+
+const BASE_API_URL = isLocal
+  ? 'http://localhost:5000'
+  : 'http://localhost:5000';
+
+export async function analyzeContract(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${BASE_API_URL}/analyze`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Error al analizar contrato: ${errText}`);
+  }
+
+  return await response.json();
+}
 EOF
 
-# Crear src/main.jsx
-cat <<EOF > src/main.jsx
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import './index.css';
-
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
-EOF
-
-# Crear archivo de estilos Tailwind
-cat <<EOF > src/index.css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-EOF
-
-# Crear api.py para backend local con Flask
-cat <<EOF > api.py
+# Crear archivo backend/api.py
+cat <<EOF > backend/api.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/analyze": {"origins": [
+    "http://localhost:5173",
+    "http://localhost:5000",
+    "https://3mmanu3lmois3s.github.io"
+]}}, supports_credentials=True)
 
 @app.route('/analyze', methods=['POST'])
 def analyze_contract():
@@ -116,7 +103,6 @@ def analyze_contract():
     file = request.files['file']
     filename = file.filename
 
-    # Simulación de análisis
     result = {
         'filename': filename,
         'type': 'Contrato de Servicios',
@@ -132,20 +118,71 @@ if __name__ == '__main__':
     app.run(debug=True, port=5000)
 EOF
 
+# Crear archivo src/index.css
+cat <<EOF > src/index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+EOF
+
+# Crear README.md
+cat <<EOF > README.md
+# AWS Contract Analyzer
+
+Demo profesional que simula una arquitectura **AWS Serverless** con:
+- Frontend: **Vite + React + Tailwind + React Flow**
+- Backend simulado: **API Flask local**
+
+## ⚙️ Requisitos previos
+- Node.js >= 18
+- Python >= 3.10
+- Git Bash (o terminal compatible con bash)
+
+## 🧰 Tecnologías utilizadas
+| Herramienta | Rol |
+|------------|-----|
+| React + Vite | Frontend moderno |
+| Tailwind CSS | Estilos UI |
+| ReactFlow | Diagrama visual AWS |
+| Flask + Flask-CORS | Simulación API análisis |
+| GitHub Pages | Despliegue estático frontend |
+
+## 🚀 Instalación rápida
+```bash
+git clone https://github.com/3mmanu3lmois3s/aws-contract-analyzer.git
+cd aws-contract-analyzer
+chmod +x setup.sh
+./setup.sh
+npm run dev
+```
+
+## 🌐 Despliegue en GitHub Pages
+```bash
+npm run deploy
+```
+Verás el frontend en:
+[https://3mmanu3lmois3s.github.io/aws-contract-analyzer](https://3mmanu3lmois3s.github.io/aws-contract-analyzer)
+
+⚠️ **Importante**: La API Flask debe estar corriendo localmente en `http://localhost:5000` para que el análisis funcione.
+
+```bash
+cd backend
+python api.py
+```
+
+## 📄 Licencia
+MIT © 2025 Emmanuel Moisés Mellado Martínez
+EOF
+
 # Instalar dependencias necesarias
+echo "\n📦 Instalando dependencias necesarias..."
 npm install
 npm install -D tailwindcss postcss autoprefixer gh-pages json
-npm install axios reactflow
 
 # Mensaje final
-cat <<EOF
-
-✅ Todo listo. Ahora puedes:
----------------------------------------------
-  npm run dev     # Para desarrollo local
-  npm run build   # Para generar /dist
-  npm run deploy  # Para publicar en GitHub Pages
----------------------------------------------
-✔ Si tienes Python instalado, ejecuta también:
-  python api.py   # Para iniciar la API en localhost:5000
-EOF
+echo "\n✅ Todo listo. Ejecuta ahora:"
+echo "---------------------------------------------"
+echo "  npm run dev     # para desarrollo local"
+echo "  npm run deploy  # para publicar en GitHub Pages"
+echo "  cd backend && python api.py  # para levantar el backend"
+echo "---------------------------------------------"

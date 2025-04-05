@@ -2,8 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-
-# SOLO permitir tu GitHub Pages para producción, y localhost para pruebas
 CORS(app, resources={r"/analyze": {"origins": [
     "http://localhost:5173",
     "http://localhost:5000",
@@ -18,7 +16,6 @@ def analyze_contract():
     file = request.files['file']
     filename = file.filename
 
-    # 🧪 Simulación de análisis
     result = {
         'filename': filename,
         'type': 'Contrato de Servicios',
