@@ -24,7 +24,6 @@ def analyze_contract():
         'compliance': '✔ Cumple con GDPR',
         'recommendation': '✔ Apto para firma'
     }
-
     return jsonify(result)
 
 if __name__ == '__main__':
