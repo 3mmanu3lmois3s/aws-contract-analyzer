@@ -197,6 +197,12 @@ function App() {
                 </li>
                 <li>**Backend (Simulado):** Python, Flask</li>
                 <li>
+                  **Funcionamiento:** Recuerda ejecutar el servidor Flask
+                  (api.py) en el puerto 5000 para simular la API en la misma
+                  maquina donde abras la url
+                  https://3mmanu3lmois3s.github.io/aws-contract-analyzer/
+                </li>
+                <li>
                   **Flujo AWS (Simulado):** S3 (para carga), API Gateway (como
                   disparador), Lambda (para procesamiento), DynamoDB (para
                   resultados).
@@ -206,7 +212,8 @@ function App() {
             <p className="pt-2 font-semibold text-red-600">
               ⚠️ **Importante:** Esta demo NO se conecta a servicios reales de
               AWS. Todo el procesamiento ocurre localmente o es simulado con
-              fines demostrativos y educativos.
+              fines demostrativos y educativos (el contrato no se analiza con
+              NLP ni AI, de momento da una respuesta mockeada).
             </p>
             <p className="pt-3 mt-4 text-xs text-right border-t text-slate-500 border-slate-200">
               Autor: Ing. Emmanuel Mellado
