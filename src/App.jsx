@@ -90,6 +90,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false); // <-- AÑADIR ESTA LÍNEA
+  const [activeNode, setActiveNode] = useState(null);
 
   // --- Lógica ---
   const logStep = (msg, type = "info") => {
@@ -118,6 +119,12 @@ function App() {
       { msg: initialLog, type: "info", time: new Date().toLocaleTimeString() },
     ]);
     try {
+      setActiveNode("1");
+      setTimeout(() => setActiveNode("2"), 700);
+      setTimeout(() => setActiveNode("3"), 1300);
+      setTimeout(() => setActiveNode("4"), 1900);
+      setTimeout(() => setActiveNode(null), 3000);
+
       logStep("🚀 Enviando a API Gateway...", "info");
       const formData = new FormData();
       formData.append("file", selectedFile);
@@ -476,7 +483,7 @@ function App() {
           </h3>
           <div className="flex-grow min-h-0 p-1 bg-slate-50">
             {/* >>> IMPORTANTE: Estilizar los nodos DENTRO de AwsFlow.jsx <<< */}
-            <AwsFlow />
+            <AwsFlow activeNodeId={activeNode} />;
           </div>
         </div>
       </div>
