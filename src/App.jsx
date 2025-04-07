@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import AwsFlow from "./components/AwsFlow"; // Asegúrate que la ruta sea correcta
 import "./index.css"; // Asegúrate que solo tenga @tailwind directivas
-
+import { analyzeContract } from "./api";
 // --- Importar Heroicons ---
 import {
   CheckCircleIcon,
@@ -121,13 +121,13 @@ function App() {
       logStep("🚀 Enviando a API Gateway...", "info");
       const formData = new FormData();
       formData.append("file", selectedFile);
-      const res = await fetch("/analyze", { method: "POST", body: formData });
+      /*      const res = await fetch("/analyze", { method: "POST", body: formData });
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(errText || `Error ${res.status}`);
-      }
+      }*/
       logStep("⚙️ Procesando en Lambda...", "info");
-      const data = await res.json();
+      const data = await analyzeContract(selectedFile);
       setResult(data);
       logStep("✅ Análisis completado", "success");
     } catch (err) {
