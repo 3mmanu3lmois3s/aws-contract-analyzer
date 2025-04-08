@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
 import AwsFlow from "./components/AwsFlow"; // Asegúrate que la ruta sea correcta
+import ChatBubble from "./components/ChatBubble"; // Asegúrate de importar correctamente
 import "./index.css"; // Asegúrate que solo tenga @tailwind directivas
 import { analyzeContract } from "./api";
+import { useDarkMode } from "./hooks/useDarkMode";
 // --- Importar Heroicons ---
 import {
   CheckCircleIcon,
@@ -17,6 +19,8 @@ import {
   CheckBadgeIcon,
   NoSymbolIcon,
   PaperClipIcon,
+  MoonIcon,
+  SunIcon,
   // Iconos para los pasos de AWS (ejemplos)
   ServerIcon, // Lambda
   CircleStackIcon, // DynamoDB
@@ -27,7 +31,6 @@ import {
 
 // --- Componente Spinner ---
 const LoadingSpinner = () => (
-  // Ajustado para que el spinner sea visible sobre fondo gris
   <svg
     className="w-5 h-5 mr-3 -ml-1 text-white animate-spin"
     xmlns="http://www.w3.org/2000/svg"
@@ -91,6 +94,8 @@ function App() {
   const [error, setError] = useState(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false); // <-- AÑADIR ESTA LÍNEA
   const [activeNode, setActiveNode] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
+  useDarkMode(darkMode);
 
   // --- Lógica ---
   const logStep = (msg, type = "info") => {
@@ -99,6 +104,7 @@ function App() {
       { msg, type, time: new Date().toLocaleTimeString() },
     ]);
   };
+
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -128,11 +134,6 @@ function App() {
       logStep("🚀 Enviando a API Gateway...", "info");
       const formData = new FormData();
       formData.append("file", selectedFile);
-      /*      const res = await fetch("/analyze", { method: "POST", body: formData });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || `Error ${res.status}`);
-      }*/
       logStep("⚙️ Procesando en Lambda...", "info");
       const data = await analyzeContract(selectedFile);
       setResult(data);
@@ -187,10 +188,10 @@ function App() {
           </button>
 
           {/* Contenido del Modal */}
-          <h3 className="text-xl font-semibold text-slate-800 mb-4">
+          <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-4">
             Acerca de esta Simulación
           </h3>
-          <div className="space-y-3 text-sm text-slate-600">
+          <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
             <p>
               Esta aplicación es una **simulación educativa** diseñada para
               demostrar un flujo de procesamiento de documentos en la nube
@@ -253,7 +254,9 @@ function App() {
         />
         <div className="flex-1">
           <p className="text-sm font-medium text-slate-600">{label}</p>
-          <p className="text-sm text-slate-800">{value || "N/A"}</p>
+          <p className="text-sm text-slate-800 dark:text-slate-200">
+            {value || "N/A"}
+          </p>
         </div>
       </div>
     );
@@ -274,8 +277,8 @@ function App() {
       </div>
     );
     return (
-      <div className="mt-6 overflow-hidden bg-white border rounded-lg shadow-md border-slate-200">
-        <h3 className="px-5 py-3 text-lg font-semibold border-b bg-slate-50 text-slate-700 border-slate-200">
+      <div className="mt-6 overflow-hidden bg-white dark:bg-slate-800 border rounded-lg shadow-md border-slate-200 dark:border-slate-600">
+        <h3 className="px-5 py-3 text-lg font-semibold border-b bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-white border-slate-200 dark:border-slate-600">
           Resultado del Análisis
         </h3>
         <div className="px-5 py-4 space-y-1">
@@ -314,8 +317,8 @@ function App() {
     isLoading,
   }) => {
     return (
-      <div className="p-6 mb-6 bg-white border rounded-lg shadow-md border-slate-200">
-        <h3 className="mb-4 text-lg font-semibold text-slate-800">
+      <div className="p-6 mb-6 bg-white dark:bg-slate-800 border rounded-lg shadow-md border-slate-200 dark:border-slate-600">
+        <h3 className="mb-4 text-lg font-semibold text-slate-800 dark:text-white">
           1. Cargar Contrato (PDF)
         </h3>
         <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
@@ -378,48 +381,17 @@ function App() {
   };
 
   const LogDisplay = ({ logMessages }) => {
-    const getLogIcon = useMemo(
-      () => (type) => {
-        const className = "flex-shrink-0 w-5 h-5 mr-2.5";
-        switch (type) {
-          case "success":
-            return (
-              <CheckCircleIcon className={`${className} text-green-500`} />
-            );
-          case "error":
-            return (
-              <ExclamationCircleIcon className={`${className} text-red-500`} />
-            );
-          case "info":
-          default:
-            return (
-              <InformationCircleIcon className={`${className} text-blue-500`} />
-            );
-        }
-      },
-      []
-    );
-
     if (logMessages.length === 0) return null;
 
     return (
-      <div className="mt-6 space-y-3">
-        <h3 className="text-lg font-semibold text-slate-800">
-          Registro del Proceso
-        </h3>
-        {logMessages.map((log, i) => (
-          <div
-            key={i}
-            className="flex items-start p-3 text-sm transition duration-150 ease-in-out bg-white border rounded-md shadow-sm border-slate-200 hover:shadow-md"
-          >
-            {getLogIcon(log.type)}
-            <div className="flex-1">
-              <p className="text-slate-700">{log.msg}</p>
-              <p className="text-xs text-slate-400 mt-0.5 flex items-center">
-                <ClockIcon className="w-3 h-3 mr-1" /> {log.time}
-              </p>
-            </div>
-          </div>
+      <div className="flex flex-col items-start mt-6 space-y-2">
+        {logMessages.map((log, index) => (
+          <ChatBubble
+            key={index}
+            message={log.msg}
+            type={log.type}
+            time={log.time}
+          />
         ))}
       </div>
     );
@@ -442,7 +414,9 @@ function App() {
             <h4 className="text-base font-semibold text-slate-700">
               {step.name}
             </h4>
-            <p className="mt-1 text-sm text-slate-600">{step.description}</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              {step.description}
+            </p>
           </div>
         </div>
       ))}
@@ -452,7 +426,7 @@ function App() {
   // --- Renderizado Principal (AJUSTADO) ---
   return (
     // Añadido 'relative' para posicionar el botón de info
-    <div className="relative flex w-screen h-screen overflow-hidden font-sans bg-gradient-to-br from-slate-50 to-slate-200">
+    <div className="relative flex w-screen h-screen overflow-hidden font-sans bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
       {/* === Botón de Información (AÑADIDO) === */}
       <button
         onClick={() => setIsInfoModalOpen(true)} // Abre el modal
@@ -463,9 +437,21 @@ function App() {
       </button>
       {/* === Fin Botón de Información === */}
 
+      <button
+        onClick={() => setDarkMode(!darkMode)}
+        className="absolute top-4 right-16 z-10 p-2 text-slate-500 bg-white dark:bg-gray-700 rounded-full shadow-md hover:bg-slate-100 hover:dark:bg-gray-600 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all"
+        aria-label="Alternar modo oscuro"
+      >
+        {darkMode ? (
+          <SunIcon className="w-6 h-6" />
+        ) : (
+          <MoonIcon className="w-6 h-6" />
+        )}
+      </button>
+
       {/* === Columna Izquierda (Sin cambios internos) === */}
       <div className="flex flex-col w-1/2 h-full p-6 pr-3 overflow-y-auto">
-        <h1 className="flex-shrink-0 mb-6 text-2xl font-bold text-slate-900">
+        <h1 className="flex-shrink-0 mb-6 text-2xl font-bold text-slate-900 dark:text-white">
           AWS Contract Analyzer 💼
         </h1>
         <div className="flex-shrink-0">
@@ -477,8 +463,8 @@ function App() {
             isLoading={isLoading}
           />
         </div>
-        <div className="flex flex-col flex-grow mt-6 overflow-hidden bg-white border rounded-lg shadow-md border-slate-200">
-          <h3 className="flex-shrink-0 px-5 py-3 text-lg font-semibold border-b bg-slate-50 text-slate-700 border-slate-200">
+        <div className="flex flex-col flex-grow mt-6 overflow-hidden bg-white dark:bg-slate-800 border rounded-lg shadow-md border-slate-200 dark:border-slate-600">
+          <h3 className="flex-shrink-0 px-5 py-3 text-lg font-semibold border-b bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-white border-slate-200 dark:border-slate-600">
             Arquitectura del Proceso
           </h3>
           <div className="flex-grow min-h-0 p-1 bg-slate-50">
@@ -489,9 +475,9 @@ function App() {
       </div>
 
       {/* === Columna Derecha (Sin cambios internos, excepto título ajustado) === */}
-      <div className="w-1/2 h-full p-6 pl-3 overflow-y-auto border-l border-slate-300 bg-slate-100">
+      <div className="w-1/2 h-full p-6 pl-3 overflow-y-auto border-l border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900">
         {/* Ajustado padding top para dejar espacio al botón de info en pantallas pequeñas */}
-        <h2 className="pt-8 mb-6 text-xl font-semibold text-slate-900 lg:pt-0">
+        <h2 className="pt-8 mb-6 text-xl font-semibold text-slate-900 dark:text-white lg:pt-0">
           🔍 Detalles y Seguimiento
         </h2>
         {/* Renderiza tus componentes de la columna derecha (asumiendo que ya los tienes definidos arriba) */}
@@ -499,10 +485,10 @@ function App() {
         <LogDisplay logMessages={logMessages} />
         {!isLoading && result && <ResultsDisplay result={result} />}
         {error && !isLoading && (
-          <div className="p-4 mt-6 text-sm border rounded-md bg-red-50 border-red-200">
+          <div className="p-4 mt-6 text-sm border rounded-md bg-red-50 dark:bg-red-900 border-red-200 dark:border-red-500">
             <div className="flex items-center">
               <ExclamationCircleIcon className="flex-shrink-0 w-5 h-5 mr-2 text-red-500" />
-              <p className="font-medium text-red-700">
+              <p className="font-medium text-red-700 dark:text-red-200">
                 Error en el análisis:{" "}
                 <span className="font-normal">{error}</span>
               </p>
@@ -510,7 +496,7 @@ function App() {
           </div>
         )}
         {logMessages.length === 0 && !result && !isLoading && !error && (
-          <div className="p-6 mt-6 text-sm text-center border border-dashed rounded-md bg-slate-50 border-slate-300 text-slate-500">
+          <div className="p-6 mt-6 text-sm text-center border border-dashed rounded-md bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-300">
             Sube un contrato PDF para iniciar el análisis y ver el seguimiento
             aquí.
           </div>
