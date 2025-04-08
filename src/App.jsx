@@ -97,6 +97,8 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   useDarkMode(darkMode);
 
+  const [showDevOverlay, setShowDevOverlay] = useState(false);
+
   // --- Lógica ---
   const logStep = (msg, type = "info") => {
     setLogMessages((prev) => [
@@ -113,6 +115,10 @@ function App() {
       setLogMessages([]);
       setError(null);
       logStep(`Archivo seleccionado: ${file.name}`);
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("El archivo supera los 5MB.");
+      return;
     }
   };
   const handleAnalyze = async () => {
@@ -436,7 +442,7 @@ function App() {
         <InformationCircleIcon className="w-6 h-6" />
       </button>
       {/* === Fin Botón de Información === */}
-
+      {/** ===  Botón de modo oscuro === */}
       <button
         onClick={() => setDarkMode(!darkMode)}
         className="absolute top-4 right-16 z-10 p-2 text-slate-500 bg-white dark:bg-gray-700 rounded-full shadow-md hover:bg-slate-100 hover:dark:bg-gray-600 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all"
@@ -448,7 +454,14 @@ function App() {
           <MoonIcon className="w-6 h-6" />
         )}
       </button>
-
+      {/** ===  Botón de Devtool === */}
+      <button
+        onClick={() => setShowDevOverlay(!showDevOverlay)}
+        className="absolute top-4 right-28 z-10 p-2 text-white bg-indigo-600 rounded-full shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 transition-all"
+        aria-label="DevTools"
+      >
+        🛠️
+      </button>
       {/* === Columna Izquierda (Sin cambios internos) === */}
       <div className="flex flex-col w-1/2 h-full p-6 pr-3 overflow-y-auto">
         <h1 className="flex-shrink-0 mb-6 text-2xl font-bold text-slate-900 dark:text-white">
@@ -473,7 +486,6 @@ function App() {
           </div>
         </div>
       </div>
-
       {/* === Columna Derecha (Sin cambios internos, excepto título ajustado) === */}
       <div className="w-1/2 h-full p-6 pl-3 overflow-y-auto border-l border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900">
         {/* Ajustado padding top para dejar espacio al botón de info en pantallas pequeñas */}
@@ -502,13 +514,56 @@ function App() {
           </div>
         )}
       </div>
-
       {/* === Renderizado del Modal (AÑADIDO al final, dentro del div principal) === */}
       <InfoModal
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
       />
       {/* === Fin Renderizado del Modal === */}
+      {showDevOverlay && (
+        <div className="absolute inset-0 z-40 bg-black bg-opacity-60 backdrop-blur-sm text-white text-sm p-6 space-y-4 overflow-y-auto">
+          <div className="bg-gray-800 p-4 rounded shadow-lg max-w-xl mx-auto">
+            <h2 className="text-lg font-bold mb-2">🔍 DevTools Overlay</h2>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>
+                <strong>Frontend:</strong> React + Vite + Tailwind CSS
+              </li>
+              <li>
+                <strong>Icons:</strong> Heroicons
+              </li>
+              <li>
+                <strong>API (Mock):</strong> Python Flask (en local)
+              </li>
+              <li>
+                <strong>Comunicación:</strong> React → fetch → Flask API (Puerto
+                5000)
+              </li>
+              <li>
+                <strong>Simulación:</strong> AWS: S3, API Gateway, Lambda,
+                DynamoDB
+              </li>
+              <li>
+                <strong>Visualización:</strong> React Flow para mostrar el flujo
+                de arquitectura
+              </li>
+              <li>
+                <strong>Modo Oscuro:</strong> Tailwind + toggle manual con
+                `useDarkMode`
+              </li>
+              <li>
+                <strong>Nota:</strong> Todo corre localmente, sin conexión real
+                a AWS
+              </li>
+            </ul>
+            <button
+              onClick={() => setShowDevOverlay(false)}
+              className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </div> // Cierre del div principal
   ); // Cierre del return
 }
