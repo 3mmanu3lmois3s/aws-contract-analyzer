@@ -14,9 +14,9 @@ Simular un flujo de procesamiento de contratos PDF en una arquitectura estilo **
 
 ```mermaid
 graph TD
-    A[📁 Subida del Contrato (Simula S3)] --> B[🧩 API Gateway (Proxy en Vite)]
-    B --> C[⚙️ Lambda (Análisis con Flask)]
-    C --> D[🗃️ DynamoDB (Resultados simulados)]
+    A[📁 Subida del Contrato Simula S3] --> B[🧩 API Gateway Proxy en Vite]
+    B --> C[⚙️ Lambda Análisis con Flask]
+    C --> D[🗃️ DynamoDB Resultados simulados]
 ```
 
 El frontend también muestra este flujo mediante un diagrama interactivo con `ReactFlow`.
