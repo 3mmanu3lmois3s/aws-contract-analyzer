@@ -87,6 +87,41 @@ La API de análisis corre localmente. Es fundamental ejecutarla en tu máquina:
 python api.py
 ```
 
+
+🛠️ Instrucciones para Ejecutar el Backend
+Para que la demo funcione correctamente, es necesario ejecutar el backend Flask localmente.​
+
+1. Clona el repositorio
+```bash
+git clone https://github.com/3mmanu3lmois3s/aws-contract-analyzer.git
+cd aws-contract-analyzer
+```
+2. Crea y activa un entorno virtual
+```bash
+python -m venv venv
+```
+# En Windows
+venv\Scripts\activate
+# En macOS/Linux
+source venv/bin/activate
+
+3. Instala las dependencias
+```bash
+pip install -r requirements.txt
+```
+4. Ejecuta la API
+```bash
+python api.py
+```
+La API estará disponible en http://localhost:5000.​
+
+## 🔁 Tolerancia a Fallos
+La demo incluye mecanismos de tolerancia a fallos para mejorar la experiencia del usuario:​
+
+Indicadores de estado del servidor: Muestran si el backend está activo o inactivo.​
+
+Mensajes de error amigables: Informan al usuario si el backend no está disponible.​
+
 Esto simula el comportamiento de un backend AWS Lambda. El frontend usará esta API si detecta que está en localhost.
 
 ---
