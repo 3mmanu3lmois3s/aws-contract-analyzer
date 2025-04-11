@@ -23,10 +23,17 @@ export async function analyzeContract(file) {
     credentials: "include",
   });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Error al analizar contrato: ${errText}`);
+  // ⚠️ Si la respuesta fue generada por el Service Worker (offline)
+  const contentType = response.headers.get("Content-Type");
+  if (contentType && contentType.includes("application/json")) {
+    const data = await response.json();
+    if (data?.pending) {
+      console.warn("[API] Modo offline: archivo guardado en espera");
+    }
+    return data;
   }
 
-  return await response.json();
+  // ⚠️ Si es error real del servidor Flask
+  const errorText = await response.text();
+  throw new Error(`Error al analizar contrato: ${errorText}`);
 }

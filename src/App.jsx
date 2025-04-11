@@ -85,8 +85,16 @@ const processSteps = [
   },
 ];
 
+const SERVER_CHECK_INTERVAL = 3000;
+
+const ServerStatusIndicator = ({ status }) => {
+  const color = status === "online" ? "bg-green-500" : "bg-red-500";
+  return <div className={`w-3 h-3 rounded-full shadow-md ${color}`} title={`Servidor Flask ${status}`} />;
+};
+
 // --- Componente Principal App ---
 function App() {
+  const [serverStatus, setServerStatus] = useState("unknown");
   const [result, setResult] = useState(null);
   const [logMessages, setLogMessages] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -95,10 +103,9 @@ function App() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false); // <-- AÑADIR ESTA LÍNEA
   const [activeNode, setActiveNode] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
-  useDarkMode(darkMode);
-
   const [showDevOverlay, setShowDevOverlay] = useState(false);
-
+  const [pendingPDFName, setPendingPDFName] = useState(null);
+  useDarkMode(darkMode);
   // --- Lógica ---
   const logStep = (msg, type = "info") => {
     setLogMessages((prev) => [
@@ -106,6 +113,58 @@ function App() {
       { msg, type, time: new Date().toLocaleTimeString() },
     ]);
   };
+
+  useEffect(() => {
+    const checkServer = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/healthcheck");
+        if (response.ok) {
+          setServerStatus("online");
+        } else {
+          setServerStatus("offline");
+        }
+      } catch {
+        setServerStatus("offline");
+      }
+    };
+    checkServer();
+    const interval = setInterval(checkServer, SERVER_CHECK_INTERVAL);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Verificación de IndexedDB
+  useEffect(() => {
+    const checkPendingAtStart = () => {
+      if ("serviceWorker" in navigator) {
+        // Esperamos a que el Service Worker esté activo
+        navigator.serviceWorker.ready.then((registration) => {
+          if (!navigator.serviceWorker.controller) {
+            console.warn("❌ SW controller no está disponible todavía.");
+            return;
+          }
+  
+          const channel = new MessageChannel();
+          channel.port1.onmessage = (event) => {
+            const response = event.data;
+            console.log("[App] Respuesta del SW (inicio):", response);
+  
+            if (response?.meta?.name) {
+              setPendingPDFName(response.meta.name);
+              logStep(`📥 Archivo pendiente detectado al iniciar: ${response.meta.name}`, "warning");
+            } else {
+              console.log("✅ No hay archivo pendiente al iniciar.");
+            }
+          };
+  
+          navigator.serviceWorker.controller.postMessage("GET_PENDING_PDF", [channel.port2]);
+        });
+      }
+    };
+  
+    checkPendingAtStart();
+  }, []);
+  
+
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -142,17 +201,105 @@ function App() {
       formData.append("file", selectedFile);
       logStep("⚙️ Procesando en Lambda...", "info");
       const data = await analyzeContract(selectedFile);
+      if (data?.pending) {
+        setPendingPDFName(selectedFile.name);
+        logStep("📂 El backend Flask no está disponible. El archivo se guardó para reenviarse luego.", "warning");
+        return; // 🚫 Salimos para no intentar setear resultado
+      }
+
       setResult(data);
       logStep("✅ Análisis completado", "success");
     } catch (err) {
       console.error("Error:", err);
-      const errorMsg = `❌ Error en el análisis: ${err.message}`;
-      logStep(errorMsg, "error");
+      if (err.message.includes("almacenado localmente")) {
+        logStep("📥 El backend está offline. El PDF se ha guardado para procesarse más tarde.", "warning");
+      } else {
+        const errorMsg = `❌ Error en el análisis: ${err.message}`;
+        logStep(errorMsg, "error");
+      }
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
+
+
+// PDF en modo offline
+const onRetryPending = async () => {
+  logStep("📦 Recuperando archivo pendiente desde IndexedDB...");
+  setIsLoading(true);
+  setResult(null);
+  setError(null);
+  setLogMessages([]);
+
+  try {
+    const file = await getPendingFileFromIndexedDB();
+
+    if (!file) {
+      logStep("❌ No se encontró archivo pendiente", "error");
+      setIsLoading(false);
+      return;
+    }
+
+    logStep(`📄 Reintentando análisis de: ${file.name}`);
+
+    const data = await analyzeContract(file);
+
+    if (data?.pending) {
+      logStep("📂 El backend sigue offline. El PDF se mantiene en espera.", "warning");
+      return; // ❌ NO limpiamos ni seteamos nada si sigue caído
+    }
+    
+    logStep("✅ Análisis completado tras reintento", "success");
+    setResult(data);
+    
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage("CLEAR_PENDING_PDF");
+    }
+    setPendingPDFName(null);
+  } catch (err) {
+    logStep(`❌ Error al reintentar: ${err.message}`, "error");
+    setError(err.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+async function getPendingFileFromIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("offline-pdf-db", 1);
+
+    request.onerror = () => reject("No se pudo abrir IndexedDB");
+
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction("pendingUploads", "readonly");
+      const store = tx.objectStore("pendingUploads");
+      const getReq = store.get("pending");
+
+      getReq.onsuccess = () => {
+        const result = getReq.result;
+        if (!result || !result.file) {
+          return resolve(null);
+        }
+
+        const file = result.file;
+        resolve(
+          new File([file], file.name, {
+            type: file.type,
+            lastModified: file.lastModified,
+          })
+        );
+      };
+
+      getReq.onerror = () => reject("Error al obtener el archivo");
+    };
+  });
+}
+
+
+
 
   // --- Componente Modal Informativo ---
   const InfoModal = ({ isOpen, onClose }) => {
@@ -173,6 +320,25 @@ function App() {
       };
     }, [onClose]);
 
+
+
+
+    //const [pendingPDFName, setPendingPDFName] = useState(null);
+
+    useEffect(() => {
+      if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+        const channel = new MessageChannel();
+        channel.port1.onmessage = (event) => {
+          if (event.data?.file?.name) {
+            setPendingPDFName(event.data.file.name);
+            logStep(`📥 Archivo en espera: ${event.data.file.name}`, "warning");
+          }
+        };
+        navigator.serviceWorker.controller.postMessage("GET_PENDING_PDF", [channel.port2]);
+      }
+    }, []);
+
+
     return (
       // Overlay oscuro semitransparente
       <div
@@ -187,14 +353,14 @@ function App() {
           {/* Botón de Cerrar (X) */}
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 transition-colors"
+            className="absolute transition-colors top-3 right-3 text-slate-400 hover:text-slate-600"
             aria-label="Cerrar modal"
           >
             <XMarkIcon className="w-6 h-6" />
           </button>
 
           {/* Contenido del Modal */}
-          <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-4">
+          <h3 className="mb-4 text-xl font-semibold text-slate-800 dark:text-white">
             Acerca de esta Simulación
           </h3>
           <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
@@ -283,7 +449,7 @@ function App() {
       </div>
     );
     return (
-      <div className="mt-6 overflow-hidden bg-white dark:bg-slate-800 border rounded-lg shadow-md border-slate-200 dark:border-slate-600">
+      <div className="mt-6 overflow-hidden bg-white border rounded-lg shadow-md dark:bg-slate-800 border-slate-200 dark:border-slate-600">
         <h3 className="px-5 py-3 text-lg font-semibold border-b bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-white border-slate-200 dark:border-slate-600">
           Resultado del Análisis
         </h3>
@@ -321,12 +487,22 @@ function App() {
     onAnalyze,
     selectedFile,
     isLoading,
-  }) => {
-    return (
-      <div className="p-6 mb-6 bg-white dark:bg-slate-800 border rounded-lg shadow-md border-slate-200 dark:border-slate-600">
+    pendingPDFName,
+  }) => {  
+    return ( 
+      <div className="p-6 mb-6 bg-white border rounded-lg shadow-md dark:bg-slate-800 border-slate-200 dark:border-slate-600">
         <h3 className="mb-4 text-lg font-semibold text-slate-800 dark:text-white">
           1. Cargar Contrato (PDF)
         </h3>
+
+        {pendingPDFName && (
+  <div className="p-4 mb-4 text-yellow-800 border border-yellow-300 rounded bg-yellow-50 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700">
+    <strong>Hay una solicitud pendiente:</strong> el archivo <em>{pendingPDFName}</em> está en espera porque el servidor Flask estaba apagado.  
+    <br />Por favor, comunícate con el administrador y vuelve a intentar más tarde.
+  </div>
+)}
+
+
         <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
           <label
             className={`relative cursor-pointer inline-flex items-center justify-center px-5 py-2 border rounded-md shadow-sm text-sm font-medium focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500 transition duration-150 ease-in-out ${
@@ -365,7 +541,7 @@ function App() {
           <button
             type="button"
             onClick={onAnalyze}
-            disabled={isLoading}
+            disabled={isLoading || !!pendingPDFName}
             // --- Usando colores GRIS (slate) / blanco ---
             className={`mt-4 w-full inline-flex justify-center items-center px-6 py-2.5 border border-transparent text-base font-semibold rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition duration-150 ease-in-out ${
               isLoading
@@ -381,7 +557,22 @@ function App() {
               "Analizar Contrato"
             )}
           </button>
+
+
+
+
         )}
+
+{pendingPDFName && (
+  <button
+    type="button"
+    onClick={onRetryPending}
+    className="mt-2 w-full inline-flex justify-center items-center px-6 py-2.5 border border-indigo-600 text-indigo-700 bg-white hover:bg-indigo-50 font-semibold rounded-md shadow-sm transition duration-150 ease-in-out"
+  >
+    🔄 Reintentar análisis de: {pendingPDFName}
+  </button>
+)}
+
       </div>
     );
   };
@@ -412,7 +603,7 @@ function App() {
           className="flex items-start p-4 space-x-4 transition duration-150 ease-in-out bg-white border rounded-lg shadow-sm border-slate-200 hover:shadow-lg hover:border-primary-300"
         >
           <step.icon
-            className="flex-shrink-0 w-8 h-8 text-primary-600 mt-1"
+            className="flex-shrink-0 w-8 h-8 mt-1 text-primary-600"
             aria-hidden="true"
           />{" "}
           {/* Mantenemos iconos azules aquí */}
@@ -431,37 +622,43 @@ function App() {
 
   // --- Renderizado Principal (AJUSTADO) ---
   return (
+    
     // Añadido 'relative' para posicionar el botón de info
     <div className="relative flex w-screen h-screen overflow-hidden font-sans bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
-      {/* === Botón de Información (AÑADIDO) === */}
-      <button
-        onClick={() => setIsInfoModalOpen(true)} // Abre el modal
-        className="absolute top-4 right-4 z-10 p-2 text-slate-500 bg-white rounded-full shadow-md hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all"
-        aria-label="Mostrar información"
-      >
-        <InformationCircleIcon className="w-6 h-6" />
-      </button>
-      {/* === Fin Botón de Información === */}
-      {/** ===  Botón de modo oscuro === */}
-      <button
-        onClick={() => setDarkMode(!darkMode)}
-        className="absolute top-4 right-16 z-10 p-2 text-slate-500 bg-white dark:bg-gray-700 rounded-full shadow-md hover:bg-slate-100 hover:dark:bg-gray-600 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all"
-        aria-label="Alternar modo oscuro"
-      >
-        {darkMode ? (
-          <SunIcon className="w-6 h-6" />
-        ) : (
-          <MoonIcon className="w-6 h-6" />
-        )}
-      </button>
-      {/** ===  Botón de Devtool === */}
-      <button
-        onClick={() => setShowDevOverlay(!showDevOverlay)}
-        className="absolute top-4 right-28 z-10 p-2 text-white bg-indigo-600 rounded-full shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400 transition-all"
-        aria-label="DevTools"
-      >
-        🛠️
-      </button>
+
+
+{/* === Grupo de botones con semáforo === */}
+<div className="absolute z-10 flex items-center space-x-3 top-4 right-4">
+  <ServerStatusIndicator status={serverStatus} />
+
+  <button
+    onClick={() => setShowDevOverlay(!showDevOverlay)}
+    className="p-2 text-white transition-all bg-indigo-600 rounded-full shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400"
+    aria-label="DevTools"
+  >
+    🛠️
+  </button>
+
+  <button
+    onClick={() => setDarkMode(!darkMode)}
+    className="p-2 transition-all bg-white rounded-full shadow-md text-slate-500 dark:bg-gray-700 hover:bg-slate-100 hover:dark:bg-gray-600 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+    aria-label="Alternar modo oscuro"
+  >
+    {darkMode ? <SunIcon className="w-6 h-6" /> : <MoonIcon className="w-6 h-6" />}
+  </button>
+
+  <button
+    onClick={() => setIsInfoModalOpen(true)}
+    className="p-2 transition-all bg-white rounded-full shadow-md text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+    aria-label="Mostrar información"
+  >
+    <InformationCircleIcon className="w-6 h-6" />
+  </button>
+</div>
+
+
+
+
       {/* === Columna Izquierda (Sin cambios internos) === */}
       <div className="flex flex-col w-1/2 h-full p-6 pr-3 overflow-y-auto">
         <h1 className="flex-shrink-0 mb-6 text-2xl font-bold text-slate-900 dark:text-white">
@@ -472,11 +669,13 @@ function App() {
           <StyledUploadForm
             onFileChange={handleFileChange}
             onAnalyze={handleAnalyze}
+            onRetryPending={onRetryPending}
             selectedFile={selectedFile}
             isLoading={isLoading}
+            pendingPDFName={pendingPDFName}
           />
         </div>
-        <div className="flex flex-col flex-grow mt-6 overflow-hidden bg-white dark:bg-slate-800 border rounded-lg shadow-md border-slate-200 dark:border-slate-600">
+        <div className="flex flex-col flex-grow mt-6 overflow-hidden bg-white border rounded-lg shadow-md dark:bg-slate-800 border-slate-200 dark:border-slate-600">
           <h3 className="flex-shrink-0 px-5 py-3 text-lg font-semibold border-b bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-white border-slate-200 dark:border-slate-600">
             Arquitectura del Proceso
           </h3>
@@ -497,7 +696,7 @@ function App() {
         <LogDisplay logMessages={logMessages} />
         {!isLoading && result && <ResultsDisplay result={result} />}
         {error && !isLoading && (
-          <div className="p-4 mt-6 text-sm border rounded-md bg-red-50 dark:bg-red-900 border-red-200 dark:border-red-500">
+          <div className="p-4 mt-6 text-sm border border-red-200 rounded-md bg-red-50 dark:bg-red-900 dark:border-red-500">
             <div className="flex items-center">
               <ExclamationCircleIcon className="flex-shrink-0 w-5 h-5 mr-2 text-red-500" />
               <p className="font-medium text-red-700 dark:text-red-200">
@@ -521,10 +720,10 @@ function App() {
       />
       {/* === Fin Renderizado del Modal === */}
       {showDevOverlay && (
-        <div className="absolute inset-0 z-40 bg-black bg-opacity-60 backdrop-blur-sm text-white text-sm p-6 space-y-4 overflow-y-auto">
-          <div className="bg-gray-800 p-4 rounded shadow-lg max-w-xl mx-auto">
-            <h2 className="text-lg font-bold mb-2">🔍 DevTools Overlay</h2>
-            <ul className="list-disc pl-5 space-y-2">
+        <div className="absolute inset-0 z-40 p-6 space-y-4 overflow-y-auto text-sm text-white bg-black bg-opacity-60 backdrop-blur-sm">
+          <div className="max-w-xl p-4 mx-auto bg-gray-800 rounded shadow-lg">
+            <h2 className="mb-2 text-lg font-bold">🔍 DevTools Overlay</h2>
+            <ul className="pl-5 space-y-2 list-disc">
               <li>
                 <strong>Frontend:</strong> React + Vite + Tailwind CSS
               </li>
@@ -557,10 +756,11 @@ function App() {
             </ul>
             <button
               onClick={() => setShowDevOverlay(false)}
-              className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded"
+              className="px-4 py-2 mt-4 text-white bg-indigo-600 rounded hover:bg-indigo-700"
             >
               Cerrar
             </button>
+
           </div>
         </div>
       )}

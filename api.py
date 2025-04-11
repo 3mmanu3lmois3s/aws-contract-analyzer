@@ -4,11 +4,18 @@ from flask_cors import CORS
 app = Flask(__name__)
 
 # SOLO permitir tu GitHub Pages para producción, y localhost para pruebas
-CORS(app, resources={r"/analyze": {"origins": [
-    "http://localhost:5173",
-    "http://localhost:5000",
-    "https://3mmanu3lmois3s.github.io"
-]}}, supports_credentials=True)
+CORS(app, resources={
+    r"/analyze": {"origins": [
+        "http://localhost:5173",
+        "http://localhost:5000",
+        "https://3mmanu3lmois3s.github.io"
+    ]},
+    r"/healthcheck": {"origins": [
+        "http://localhost:5173",
+        "http://localhost:5000",
+        "https://3mmanu3lmois3s.github.io"
+    ]}
+}, supports_credentials=True)
 
 @app.route('/analyze', methods=['POST'])
 def analyze_contract():
@@ -29,6 +36,13 @@ def analyze_contract():
     }
 
     return jsonify(result)
+
+
+# ✅ Endpoint para que el frontend consulte si el servidor está vivo
+@app.route('/healthcheck', methods=['GET'])
+def healthcheck():
+    return jsonify({"status": "ok"}), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
