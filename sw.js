@@ -1,4 +1,10 @@
-// sw.js - Service Worker con soporte de modo offline (PDF en standby)
+// sw.js - Service Worker con modo offline y extracción de texto del PDF
+
+importScripts(
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"
+);
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js";
 
 const CACHE_NAME = "aws-analyzer-v1";
 const DB_NAME = "offline-pdf-db";
@@ -20,34 +26,44 @@ function openDB() {
   });
 }
 
-function storePendingPDF(file) {
-  return new Promise(async (resolve, reject) => {
+async function storePendingPDF(file) {
+  try {
+    // ✅ Leer buffer antes de abrir la transacción
+    const arrayBuffer = await file.arrayBuffer();
+    const fileClone = new File([arrayBuffer], file.name, {
+      type: file.type,
+      lastModified: file.lastModified,
+    });
+
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
-    const req = store.put({ id: "pending", file });
+
+    const req = store.put({ id: "pending", file: fileClone });
 
     req.onsuccess = () => {
-      console.log("[SW] Archivo PDF almacenado en IndexedDB.");
-      resolve(true);
+      console.log("[SW] ✅ PDF guardado en IndexedDB.");
     };
     req.onerror = (err) => {
-      console.error("[SW] Error al guardar el PDF:", err);
-      reject(err);
+      console.error("[SW] ❌ Error al guardar PDF:", err);
     };
-  });
+  } catch (err) {
+    console.error("[SW] ❌ Error general al guardar PDF:", err);
+  }
 }
+
+
+
 
 
 async function getPendingPDF() {
   const db = await openDB();
   const tx = db.transaction(STORE_NAME, "readonly");
   const store = tx.objectStore(STORE_NAME);
-
   return new Promise((resolve, reject) => {
     const req = store.get("pending");
     req.onsuccess = () => {
-      console.log("[SW] getPendingPDF → encontrado:", req.result);
+      //console.log("[SW] getPendingPDF → encontrado:", req.result);
       resolve(req.result);
     };
     req.onerror = (e) => {
@@ -57,13 +73,28 @@ async function getPendingPDF() {
   });
 }
 
-
 async function clearPendingPDF() {
   const db = await openDB();
   const tx = db.transaction(STORE_NAME, "readwrite");
   const store = tx.objectStore(STORE_NAME);
   await store.delete("pending");
   return tx.complete;
+}
+
+// === DEBUG: Extraer texto del Blob PDF
+async function pdfBlobToText(blob) {
+  const arrayBuffer = await blob.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let fullText = "";
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const text = content.items.map((item) => item.str).join(" ");
+    fullText += `\n[Page ${i}]:\n${text}`;
+  }
+
+  return fullText.trim();
 }
 
 // === Eventos del SW ===
@@ -76,19 +107,17 @@ self.addEventListener("activate", (event) => {
   clients.claim();
 });
 
-// Interceptar /analyze POST (en cualquier subruta)
 self.addEventListener("fetch", (event) => {
-    const { request } = event;
-    const url = new URL(request.url);
-  
-    if (url.pathname.endsWith("/analyze") && request.method === "POST") {
-      console.log("[SW] Interceptando POST /analyze");
-      event.respondWith(handleAnalyzeRequest(request));
-    } else {
-      // Para debug
-      console.log("[SW] Ignorando:", url.pathname);
-    }
-  });
+  const { request } = event;
+  const url = new URL(request.url);
+
+  if (url.pathname.endsWith("/analyze") && request.method === "POST") {
+    //console.log("[SW] Interceptando POST /analyze");
+    event.respondWith(handleAnalyzeRequest(request));
+  } else {
+    //console.log("[SW] Ignorando:", url.pathname);
+  }
+});
 
 async function handleAnalyzeRequest(request) {
   try {
@@ -100,7 +129,6 @@ async function handleAnalyzeRequest(request) {
 
     return response;
   } catch (error) {
-    // Extraer el archivo PDF del FormData
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -112,8 +140,7 @@ async function handleAnalyzeRequest(request) {
     return new Response(
       JSON.stringify({
         pending: true,
-        message:
-          "Servidor Flask offline. El archivo se ha guardado localmente.",
+        message: "Servidor Flask offline. El archivo se ha guardado localmente.",
       }),
       {
         status: 200,
@@ -123,16 +150,13 @@ async function handleAnalyzeRequest(request) {
   }
 }
 
-// Comunicación externa (por ejemplo, desde App.jsx)
+// === Comunicación entre App.jsx y el SW
 self.addEventListener("message", async (event) => {
   if (event.data === "GET_PENDING_PDF") {
     const result = await getPendingPDF();
-
     if (result && result.file) {
       const fileBlob = result.file;
       const fileData = await fileBlob.arrayBuffer();
-
-      console.log("[SW] Enviando archivo pendiente al cliente:", result.file.name);
 
       event.ports[0].postMessage({
         fileData,
@@ -152,5 +176,3 @@ self.addEventListener("message", async (event) => {
     console.log("[SW] PDF pendiente eliminado de IndexedDB.");
   }
 });
-
-
