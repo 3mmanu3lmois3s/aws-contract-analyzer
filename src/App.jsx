@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import AwsFlow from "./components/AwsFlow"; // Asegúrate que la ruta sea correcta
 import ChatBubble from "./components/ChatBubble"; // Asegúrate de importar correctamente
 import "./index.css"; // Asegúrate que solo tenga @tailwind directivas
-import { analyzeContract } from "./api";
+import { analyzeContract, extractTextFromPDFBlob } from "./api";
 import { useDarkMode } from "./hooks/useDarkMode";
 // --- Importar Heroicons ---
 import {
@@ -131,6 +131,29 @@ function App() {
     const interval = setInterval(checkServer, SERVER_CHECK_INTERVAL);
     return () => clearInterval(interval);
   }, []);
+
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = async (event) => {
+        const response = event.data;
+        if (response?.fileData && response?.meta) {
+          const blob = new Blob([response.fileData], {
+            type: response.meta.type || "application/pdf",
+          });
+          try {
+            const text = await extractTextFromPDFBlob(blob);
+            console.log("[APP][OFFLINE PDF TEXT]:\n", text);
+          } catch (err) {
+            console.error("[APP][OFFLINE PDF ERROR]", err);
+          }
+        }
+      };
+      navigator.serviceWorker.controller.postMessage("GET_PENDING_PDF", [channel.port2]);
+    }
+  }, []);
+
 
   // Verificación de IndexedDB
   useEffect(() => {
@@ -454,34 +477,46 @@ async function getPendingFileFromIndexedDB() {
           Resultado del Análisis
         </h3>
         <div className="px-5 py-4 space-y-1">
-          {renderItem(PaperClipIcon, "Archivo", result.filename)}
-          {renderItem(DocumentTextIcon, "Tipo Contrato", result.type)}
-          {renderItem(CalendarDaysIcon, "Duración", result.duration)}
-          {renderItem(
-            result.compliance?.includes("Cumple")
-              ? ShieldCheckIcon
-              : ShieldExclamationIcon,
-            "Cumplimiento",
-            result.compliance
-          )}
-          {renderItem(
-            result.recommendation?.includes("Apto")
-              ? CheckBadgeIcon
-              : NoSymbolIcon,
-            "Recomendación",
-            result.recommendation
-          )}
-          {renderBadgeItem(
-            ScaleIcon,
-            "Nivel de Riesgo",
-            result.risk,
-            getRiskBadgeStyle(result.risk)
-          )}
+        {result.filename && renderItem(PaperClipIcon, "Archivo", result.filename)}
+{result.type && renderItem(DocumentTextIcon, "Tipo Contrato", result.type)}
+{result.duration && result.duration !== "N/A" && renderItem(CalendarDaysIcon, "Duración", result.duration)}
+
+{result.compliance && result.compliance !== "N/A" &&
+  renderItem(
+    result.compliance?.includes("Cumple") ? ShieldCheckIcon : ShieldExclamationIcon,
+    "Cumplimiento",
+    result.compliance
+  )
+}
+
+{result.recommendation && renderItem(
+  result.recommendation?.includes("Apto") ? CheckBadgeIcon : NoSymbolIcon,
+  "Recomendación",
+  result.recommendation
+)}
+
+{result.amount && result.amount !== "N/A" && result.amount !== "No aplica" &&
+  renderItem(ScaleIcon, "Monto", result.amount)}
+
+{result.monthly_payment && result.monthly_payment !== "N/A" &&
+  renderItem(CalendarDaysIcon, "Pago mensual", result.monthly_payment)}
+
+{result.deposit && result.deposit !== "N/A" && result.deposit !== "No aplica" &&
+  renderItem(ShieldExclamationIcon, "Depósito o garantía", result.deposit)}
+
+{result.sale_item && result.sale_item !== "N/A" && result.sale_item !== "No aplica" &&
+  renderItem(DocumentTextIcon, "Objeto vendido", result.sale_item)}
+
+{result.objeto_venta && result.objeto_venta !== "N/A" && result.objeto_venta !== "No especificado" &&
+  renderItem(DocumentTextIcon, "Objeto de la venta", result.objeto_venta)}
+
+{result.risk && result.risk !== "N/A" &&
+  renderBadgeItem(ScaleIcon, "Nivel de Riesgo", result.risk, getRiskBadgeStyle(result.risk))}
         </div>
       </div>
     );
   };
-
+  
   const StyledUploadForm = ({
     onFileChange,
     onAnalyze,

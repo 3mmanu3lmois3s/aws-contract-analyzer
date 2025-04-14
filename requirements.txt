@@ -1,2 +1,16 @@
 Flask==2.3.2
 flask-cors==3.0.10
+
+# Procesamiento de PDF
+pdfplumber==0.10.2
+
+# NLP con spaCy
+spacy==3.7.2
+es_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.7.0/es_core_news_sm-3.7.0-py3-none-any.whl
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0-py3-none-any.whl
+
+# Detección de idioma
+langdetect==1.0.9
+
+# Utilidades generales
+regex==2023.12.25
