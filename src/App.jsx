@@ -666,6 +666,15 @@ async function getPendingFileFromIndexedDB() {
 <div className="absolute z-10 flex items-center space-x-3 top-4 right-4">
   <ServerStatusIndicator status={serverStatus} />
 
+  <a
+    href="https://github.com/3mmanu3lmois3s/aws-contract-analyzer/releases/download/v3.0.0/contract-api.exe"
+    download
+    title="Descargar ejecutable para Windows"
+    className="p-2 text-white transition-all bg-green-600 rounded-full shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400"
+  >
+    💾
+  </a>
+
   <button
     onClick={() => setShowDevOverlay(!showDevOverlay)}
     className="p-2 text-white transition-all bg-indigo-600 rounded-full shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400"

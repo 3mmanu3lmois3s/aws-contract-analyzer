@@ -1,9 +1,15 @@
+import functools
+print = functools.partial(print, flush=True)
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import time
 import spacy
 from langdetect import detect
+from pathlib import Path
+from spacy.util import load_model_from_path
 import fitz
+import os
+import sys
 
 from analysis_utils import (
     extract_text_from_pdf,
@@ -16,6 +22,23 @@ from analysis_utils import (
     extract_object,
     detect_compliance
 )
+
+def get_model_path(name):
+    if getattr(sys, 'frozen', False):
+        return Path(sys._MEIPASS) / name  # Devuelve un objeto Path
+    return Path(name)  # También aquí devolvemos Path, no string
+
+def safe_load_model(name):
+    try:
+        return spacy.load(name)
+    except Exception:
+        try:
+            from spacy.util import load_model_from_path
+            print(f"[Fallback] Usando load_model_from_path para: {name}")
+            return load_model_from_path(get_model_path(name))
+        except Exception as fallback_error:
+            raise RuntimeError(f"Error cargando modelo NLP '{name}': {fallback_error}")
+
 
 app = Flask(__name__)
 CORS(app, origins=[
@@ -44,9 +67,9 @@ def apply_cors_headers(response):
 print("Cargando modelos NLP...")
 try:
     NLP_MODELS = {
-        "en": spacy.load("en_core_web_sm"),
-        "es": spacy.load("es_core_news_sm"),
-    }
+    "en": safe_load_model("en_core_web_sm"),
+    "es": safe_load_model("es_core_news_sm"),
+}
     print("Modelos NLP cargados correctamente.")
     MODELS_LOADED = True
 except Exception as e:
