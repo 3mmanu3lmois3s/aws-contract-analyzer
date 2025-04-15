@@ -4,3 +4,27 @@ dist/
 __pycache__/
 *.pyc
 venv/
+
+# Ignorar build y dist de PyInstaller
+/build/
+/dist/
+*.spec
+
+# Ignorar ejecutables
+*.exe
+
+# Ignorar archivos de PyInstaller
+*.toc
+*.pkg
+*.pyz
+*.html
+*.zip
+warn-*
+xref-*
+
+# Ignorar carpetas temporales
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.tmp
