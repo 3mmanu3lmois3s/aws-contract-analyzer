@@ -46,6 +46,16 @@ El frontend también muestra este flujo mediante un diagrama interactivo con `Re
 
 ---
 
+## Prueba rapida de la demo
+
+🖥️ Descargar Ejecutable del backend
+➡️ [Descargar contract-api.exe (Windows)](https://github.com/3mmanu3lmois3s/aws-contract-analyzer/releases/download/v3.0/contract-api.exe)
+
+📄 Ejecutalo, incluye todo lo necesario para ejecutar el backend Flask local sin instalar nada.
+🖥️ Entrar a la githubpages de la demo y prueba a subir los contratos PDF de ejemplo que estan en el repositorio github del proyecto.
+
+---
+
 ## 📦 Instalación rápida
 
 ```bash
