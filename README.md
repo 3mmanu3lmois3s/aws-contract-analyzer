@@ -129,6 +129,8 @@ La API estará disponible en http://localhost:5000.​
 ## 🔁 Tolerancia a Fallos
 La demo incluye mecanismos de tolerancia a fallos para mejorar la experiencia del usuario:​
 
+El contrato PDF se almacena en el navegador (indexeDB): si el servidor no esta disponible, cuando el servidor esta nuevamente disponible el frontend permite al usuario procesar el contrato, sin tener que cargarlo nuevamente, puede probar este comportamiento apagando el servidor e intentando procesar un contrato, el service worker del forntend se encargará de su almacenamiento en el navegador y su procesamiento posterior.
+
 Indicadores de estado del servidor: Muestran si el backend está activo o inactivo.​
 
 Mensajes de error amigables: Informan al usuario si el backend no está disponible.​
